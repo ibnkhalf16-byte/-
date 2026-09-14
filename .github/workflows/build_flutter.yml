@@ -1,4 +1,4 @@
-name: Build Flutter APK
+name: Build Android and Windows
 
 on:
   push:
@@ -6,9 +6,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  build-android:
+    name: Build Android APK
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -65,9 +65,46 @@ jobs:
       - name: Build Release APK
         run: flutter build apk --release --no-tree-shake-icons
 
-      - name: Upload APK
+      - name: Upload Android APK
         uses: actions/upload-artifact@v4
         with:
-          name: AlaaAbuShady-Flutter-App
+          name: AlaaAbuShady-Android-App
           path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+
+  build-windows:
+    name: Build Windows App
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Enable Windows Desktop & Scaffolding
+        run: |
+          flutter config --enable-windows-desktop
+          flutter create . --platforms=windows --org com.alaa.accounts
+
+      - name: Get Dependencies
+        run: flutter pub get
+
+      - name: Build Windows Executable
+        run: flutter build windows --release
+
+      - name: Compress Windows Output
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path build/dist
+          Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath build\dist\AlaaAbuShady-Windows.zip
+
+      - name: Upload Windows App
+        uses: actions/upload-artifact@v4
+        with:
+          name: AlaaAbuShady-Windows-App
+          path: build/dist/AlaaAbuShady-Windows.zip
           if-no-files-found: error
