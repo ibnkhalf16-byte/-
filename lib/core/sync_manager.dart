@@ -47,7 +47,6 @@ class SyncManager {
           final records = await db.query(table, where: 'id = ?', whereArgs: [recordId]);
           if (records.isNotEmpty) {
             final data = Map<String, dynamic>.from(records.first);
-            // إزالة الأعمدة التي يديرها السيرفر إن وجدت
             data.remove('created_at');
             await client.from(table).upsert(data);
           }
@@ -63,43 +62,39 @@ class SyncManager {
     }
   }
 
-  Future<bool> pullAllFromCloud() async {
+  Future<String> pullAllFromCloud() async {
     try {
       final client = Supabase.instance.client;
       final db = await DatabaseHelper.instance.database;
 
-      // سحب جدول الأشخاص
+      // 1. مزامنة الأشخاص
       final List<dynamic> persons = await client.from('persons').select();
       for (var p in persons) {
-        final map = Map<String, dynamic>.from(p);
-        await db.insert('persons', map, conflictAlgorithm: ConflictAlgorithm.replace);
+        await db.insert('persons', Map<String, dynamic>.from(p), conflictAlgorithm: ConflictAlgorithm.replace);
       }
 
-      // سحب جدول النقلات
+      // 2. مزامنة النقلات
       final List<dynamic> trips = await client.from('trips').select();
       for (var t in trips) {
-        final map = Map<String, dynamic>.from(t);
-        await db.insert('trips', map, conflictAlgorithm: ConflictAlgorithm.replace);
+        await db.insert('trips', Map<String, dynamic>.from(t), conflictAlgorithm: ConflictAlgorithm.replace);
       }
 
-      // سحب جدول السدادات
+      // 3. مزامنة السدادات
       final List<dynamic> payments = await client.from('payments').select();
       for (var py in payments) {
-        final map = Map<String, dynamic>.from(py);
-        await db.insert('payments', map, conflictAlgorithm: ConflictAlgorithm.replace);
+        await db.insert('payments', Map<String, dynamic>.from(py), conflictAlgorithm: ConflictAlgorithm.replace);
       }
 
-      // بعد السحب، رفع أي بيانات محلية موجودة لم تُرفع بعد
+      // رفع البيانات المحلية المعلقة
       await uploadAllLocalData();
 
-      return true;
+      return 'ok';
     } catch (e) {
-      debugPrint('Error pulling from cloud: $e');
-      return false;
+      debugPrint('Sync failed: $e');
+      return e.toString();
     }
   }
 
-  /// دالة تضمن رفع كل البيانات الموجودة في الهاتف حالياً إلى السحابة فوراً
   Future<void> uploadAllLocalData() async {
     try {
       final client = Supabase.instance.client;
@@ -126,7 +121,7 @@ class SyncManager {
         await client.from('payments').upsert(data);
       }
     } catch (e) {
-      debugPrint('Error uploading local data: $e');
+      debugPrint('Upload error: $e');
     }
   }
 }
