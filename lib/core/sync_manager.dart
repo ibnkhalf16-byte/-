@@ -8,13 +8,19 @@ class SyncManager {
   SyncManager._init();
 
   void init() {
+    // 1. استرجاع البيانات من السحابة فوراً عند فتح التطبيق
+    pullAllFromCloud();
+
+    // 2. مراقبة عودة الاتصال لمزامنة التعديلات المعلقة
     Connectivity().onConnectivityChanged.listen((result) {
       if (result != ConnectivityResult.none) {
         syncPending();
+        pullAllFromCloud();
       }
     });
   }
 
+  /// إرسال العمليات المحلية إلى السحابة
   Future<void> queueSync(String table, String action, String recordId) async {
     final db = await DatabaseHelper.instance.database;
     await db.insert('sync_queue', {
@@ -50,9 +56,36 @@ class SyncManager {
 
         await db.delete('sync_queue', where: 'id = ?', whereArgs: [item['id']]);
       } catch (_) {
-        break; // التوقف في حال تعذر الاتصال وإعادة المحاولة لاحقاً
+        break;
       }
     }
   }
-}
 
+  /// استرجاع وسحب كل البيانات من Supabase وتخزينها محلياً (Restore)
+  Future<void> pullAllFromCloud() async {
+    try {
+      final client = Supabase.instance.client;
+      final db = await DatabaseHelper.instance.database;
+
+      // سحب الأشخاص
+      final personsData = await client.from('persons').select();
+      for (var p in personsData) {
+        await db.insert('persons', Map<String, dynamic>.from(p), conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+
+      // سحب النقلات
+      final tripsData = await client.from('trips').select();
+      for (var t in tripsData) {
+        await db.insert('trips', Map<String, dynamic>.from(t), conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+
+      // سحب السدادات
+      final paymentsData = await client.from('payments').select();
+      for (var py in paymentsData) {
+        await db.insert('payments', Map<String, dynamic>.from(py), conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+    } catch (_) {
+      // التجاهل في حال عدم وجود إنترنت، والاستمرار بالبيانات المحلية
+    }
+  }
+}
