@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:crypto/crypto.dart';
+import 'package:sqflite/sqflite.dart';
 import 'dart:convert';
 import '../core/database_helper.dart';
 
@@ -95,4 +96,3 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 }
-
