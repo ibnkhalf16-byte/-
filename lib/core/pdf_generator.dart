@@ -10,13 +10,13 @@ class PdfGenerator {
   }) async {
     final pdf = pw.Document();
 
-    final fontRegular = await PdfGoogleFonts.cairoRegular();
-    final fontBold = await PdfGoogleFonts.cairoBold();
+    final fontRegular = await PdfGoogleFonts.amiriRegular();
+    final fontBold = await PdfGoogleFonts.amiriBold();
 
-    final lastBalance = events.isNotEmpty 
-        ? (events.last['balance'] as num?)?.toDouble() ?? 0.0 
+    final lastBalance = events.isNotEmpty
+        ? (events.last['balance'] as num?)?.toDouble() ?? 0.0
         : 0.0;
-        
+
     final currentDateStr = DateTime.now().toString().substring(0, 16);
 
     pdf.addPage(
@@ -32,15 +32,12 @@ class PdfGenerator {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.stretch,
             children: [
-              pw.Container(
-                width: double.infinity,
-                alignment: pw.Alignment.center,
-                padding: const pw.EdgeInsets.symmetric(horizontal: 10),
+              pw.Center(
                 child: pw.Text(
-                  'حسابات علاء أبو شادي ', // مسافة أمان لمنع قص حرف الياء
+                  'حسابات علاء أبو شـادي',
                   textDirection: pw.TextDirection.rtl,
                   style: pw.TextStyle(
-                    fontSize: 20,
+                    fontSize: 22,
                     fontWeight: pw.FontWeight.bold,
                     color: PdfColors.blueGrey900,
                   ),
@@ -54,7 +51,7 @@ class PdfGenerator {
                     'كشف حساب: ${person.name} ',
                     textDirection: pw.TextDirection.rtl,
                     style: pw.TextStyle(
-                      fontSize: 12,
+                      fontSize: 13,
                       fontWeight: pw.FontWeight.bold,
                       color: PdfColors.black,
                     ),
@@ -74,11 +71,11 @@ class PdfGenerator {
                 children: [
                   pw.Text(
                     'صفحة ${context.pageNumber}',
-                    style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
+                    style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
                   ),
                   pw.Text(
                     'تاريخ الطباعة: $currentDateStr',
-                    style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
+                    style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
                   ),
                 ],
               ),
@@ -90,20 +87,33 @@ class PdfGenerator {
             context: context,
             border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
             headerStyle: pw.TextStyle(
-              fontSize: 9,
+              fontSize: 10,
               fontWeight: pw.FontWeight.bold,
               color: PdfColors.white,
             ),
             headerDecoration: const pw.BoxDecoration(
               color: PdfColor.fromInt(0xFF1E3A5F),
             ),
-            headerHeight: 24,
-            cellHeight: 20,
-            cellStyle: const pw.TextStyle(fontSize: 8),
+            headerHeight: 25,
+            cellHeight: 22,
+            cellStyle: const pw.TextStyle(fontSize: 9),
             cellAlignment: pw.Alignment.center,
+            // ترتيب الأعمدة من اليمين لليسار
+            columnWidths: const {
+              0: pw.FlexColumnWidth(2.2), // التاريخ
+              1: pw.FlexColumnWidth(1.4), // الحركة
+              2: pw.FlexColumnWidth(2.6), // البيان
+              3: pw.FlexColumnWidth(1.8), // السيارة
+              4: pw.FlexColumnWidth(2.2), // السائق
+              5: pw.FlexColumnWidth(1.4), // طن
+              6: pw.FlexColumnWidth(1.8), // سعر الطن
+              7: pw.FlexColumnWidth(2.2), // مدين
+              8: pw.FlexColumnWidth(2.2), // دائن
+              9: pw.FlexColumnWidth(2.4), // الرصيد
+            },
             headers: <String>[
               'التاريخ',
-              'النوع',
+              'الحركة',
               'البيان',
               'السيارة',
               'السائق',
@@ -118,17 +128,17 @@ class PdfGenerator {
               final double credit = (ev['credit'] as num?)?.toDouble() ?? 0.0;
               final double balance = (ev['balance'] as num?)?.toDouble() ?? 0.0;
 
-              // قراءة الأوزان والأسعار بمختلف التسميات المحتملة
-              final double weight = (ev['weight'] ?? ev['qty'] ?? ev['ton'] as num?)?.toDouble() ?? 0.0;
-              final double price = (ev['price'] ?? ev['unit_price'] as num?)?.toDouble() ?? 0.0;
-              
-              final String vehicle = (ev['vehicle'] ?? ev['car'] ?? ev['vehicle_no'] ?? '').toString();
-              final String driver = (ev['driver'] ?? ev['driver_name'] ?? '').toString();
-              final String itemOrDesc = (ev['desc'] ?? ev['item'] ?? ev['description'] ?? '').toString();
+              final double weight = (ev['weight'] as num?)?.toDouble() ?? 0.0;
+              final double price = (ev['price'] as num?)?.toDouble() ?? 0.0;
+
+              final String vehicle = (ev['vehicle'] ?? '').toString();
+              final String driver = (ev['driver'] ?? '').toString();
+              final String itemOrDesc = (ev['desc'] ?? ev['item'] ?? '').toString();
+              final String actionType = (ev['action'] ?? ev['type'] ?? '').toString();
 
               return [
                 ev['date']?.toString() ?? '',
-                ev['type']?.toString() ?? '',
+                actionType,
                 itemOrDesc,
                 vehicle,
                 driver,
@@ -140,17 +150,26 @@ class PdfGenerator {
               ];
             }).toList(),
           ),
-          pw.SizedBox(height: 12),
+          pw.SizedBox(height: 14),
+          // الرصيد النهائي أسفل الجدول جهة اليسار
           pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.start,
+            mainAxisAlignment: pw.MainAxisAlignment.end,
             children: [
-              pw.Text(
-                'الرصيد النهائي: ${lastBalance.toStringAsFixed(2)}',
-                textDirection: pw.TextDirection.rtl,
-                style: pw.TextStyle(
-                  fontSize: 11,
-                  fontWeight: pw.FontWeight.bold,
-                  color: PdfColors.black,
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: pw.BoxDecoration(
+                  border: pw.Border.all(color: PdfColors.blueGrey800, width: 1),
+                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+                  color: PdfColors.grey100,
+                ),
+                child: pw.Text(
+                  'الرصيد النهائي: ${lastBalance.toStringAsFixed(2)}',
+                  textDirection: pw.TextDirection.rtl,
+                  style: pw.TextStyle(
+                    fontSize: 12,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfColors.black,
+                  ),
                 ),
               ),
             ],
@@ -161,7 +180,7 @@ class PdfGenerator {
               'تم تصميم البرنامج بواسطة علي خلف',
               textDirection: pw.TextDirection.rtl,
               style: pw.TextStyle(
-                fontSize: 10,
+                fontSize: 11,
                 fontWeight: pw.FontWeight.bold,
                 color: PdfColors.grey800,
               ),
