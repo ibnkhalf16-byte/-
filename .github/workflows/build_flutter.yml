@@ -28,11 +28,14 @@ jobs:
       - name: Generate Android Scaffolding
         run: |
           flutter create . --platforms=android --org com.alaa.accounts
+          
 
       - name: Get Dependencies with Upgrade
         run: |
           flutter pub get || flutter pub upgrade --major-versions
-
+      - name: Add Internet Permission
+        run: |
+          sed -i '/<application/i <uses-permission android:name="android.permission.INTERNET"/>\n<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>' android/app/src/main/AndroidManifest.xml || true
       - name: Build APK
         run: flutter build apk --release --no-tree-shake-icons
 
