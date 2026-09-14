@@ -1,4 +1,3 @@
-import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -11,9 +10,9 @@ class PdfGenerator {
   }) async {
     final pdf = pw.Document();
 
-    // تحميل خط يدعم اللغة العربية لتفادي مشكلة الحروف المنفصلة
-    final arabicFont = await PdfGoogleFonts.cairoMedium();
-    final arabicBoldFont = await PdfGoogleFonts.cairoBold();
+    // تحميل خط عربي صريح مع التأكد التام من تطبيقه
+    final font = await PdfGoogleFonts.amiriRegular();
+    final fontBold = await PdfGoogleFonts.amiriBold();
 
     final lastBalance = events.isNotEmpty ? (events.last['balance'] as double) : 0.0;
 
@@ -22,8 +21,8 @@ class PdfGenerator {
         pageFormat: PdfPageFormat.a4,
         textDirection: pw.TextDirection.rtl,
         theme: pw.ThemeData.withFont(
-          base: arabicFont,
-          bold: arabicBoldFont,
+          base: font,
+          bold: fontBold,
         ),
         header: (pw.Context context) {
           return pw.Container(
@@ -73,20 +72,19 @@ class PdfGenerator {
                 ),
                 pw.Text(
                   'تم برمجة التطبيق بواسطة علي خلف',
-                  style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColors.blue900),
+                  style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: PdfColors.blue900),
                 ),
               ],
             ),
           );
         },
         build: (pw.Context context) => [
-          // جدول المعاملات
           pw.TableHelper.fromTextArray(
             context: context,
             border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
-            headerStyle: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
+            headerStyle: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
             headerDecoration: const pw.BoxDecoration(color: PdfColors.blueGrey800),
-            cellStyle: const pw.TextStyle(fontSize: 9),
+            cellStyle: const pw.TextStyle(fontSize: 10),
             cellAlignment: pw.Alignment.center,
             headers: <String>['التاريخ', 'نوع الحركة', 'البيان', 'مدين (+)', 'دائن (-)', 'الرصيد'],
             data: events.map((ev) {
@@ -101,7 +99,6 @@ class PdfGenerator {
             }).toList(),
           ),
           pw.SizedBox(height: 15),
-          // ملخص الرصيد النهائي
           pw.Container(
             padding: const pw.EdgeInsets.all(10),
             decoration: pw.BoxDecoration(
@@ -128,7 +125,6 @@ class PdfGenerator {
       ),
     );
 
-    // فتح نافذة المعاينة والطباعة وحفظ كـ PDF ومشاركتها عبر واتساب
     await Printing.layoutPdf(
       onLayout: (PdfPageFormat format) async => pdf.save(),
       name: 'كشف_حساب_${person.name}',
