@@ -29,17 +29,34 @@ jobs:
         run: |
           flutter create . --platforms=android --org com.alaa.accounts
 
-      - name: Add Android Permissions
+      - name: Configure Android Permissions & MinSdk
         run: |
           python3 -c '
-          path = "android/app/src/main/AndroidManifest.xml"
-          with open(path, "r", encoding="utf-8") as f:
-              content = f.read()
-          perms = "\n    <uses-permission android:name=\"android.permission.INTERNET\"/>\n    <uses-permission android:name=\"android.permission.ACCESS_NETWORK_STATE\"/>\n"
-          if "android.permission.INTERNET" not in content:
-              content = content.replace("<application", perms + "    <application", 1)
-              with open(path, "w", encoding="utf-8") as f:
-                  f.write(content)
+          import os
+
+          # 1. إضافة أذونات الإنترنت في AndroidManifest.xml
+          manifest_path = "android/app/src/main/AndroidManifest.xml"
+          if os.path.exists(manifest_path):
+              with open(manifest_path, "r", encoding="utf-8") as f:
+                  content = f.read()
+              perms = """
+              <uses-permission android:name="android.permission.INTERNET"/>
+              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+          """
+              if "android.permission.INTERNET" not in content:
+                  content = content.replace("<application", perms + "\n    <application", 1)
+                  with open(manifest_path, "w", encoding="utf-8") as f:
+                      f.write(content)
+
+          # 2. ترقية minSdkVersion ليتوافق مع مكتبة الطباعة pdf و printing
+          build_gradle = "android/app/build.gradle"
+          if os.path.exists(build_gradle):
+              with open(build_gradle, "r", encoding="utf-8") as f:
+                  bg_content = f.read()
+              bg_content = bg_content.replace("minSdkVersion flutter.minSdkVersion", "minSdkVersion 21")
+              bg_content = bg_content.replace("minSdk = flutter.minSdkVersion", "minSdk = 21")
+              with open(build_gradle, "w", encoding="utf-8") as f:
+                  f.write(bg_content)
           '
 
       - name: Get Dependencies
