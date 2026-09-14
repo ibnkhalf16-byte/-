@@ -46,12 +46,12 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
 
-    final ok = await SyncManager.instance.pullAllFromCloud();
+    final String result = await SyncManager.instance.pullAllFromCloud();
 
     setState(() => _isSyncing = false);
 
     if (mounted) {
-      if (ok) {
+      if (result == 'ok') {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('تم استرجاع وتحديث كافة البيانات بنجاح ✅'),
@@ -60,9 +60,10 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('تعذر مزامنة البيانات، تحقق من تشغيل الإنترنت! ⚠️'),
+          SnackBar(
+            content: Text('فشل المزامنة: $result'),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
           ),
         );
       }
@@ -83,7 +84,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: SizedBox(
                       width: 22,
                       height: 22,
-                      child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 )
