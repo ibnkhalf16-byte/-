@@ -19,8 +19,9 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _createDB,
+      onUpgrade: _upgradeDB,
     );
   }
 
@@ -33,7 +34,8 @@ class DatabaseHelper {
         address TEXT,
         notes TEXT,
         opening_receivable REAL DEFAULT 0,
-        opening_payable REAL DEFAULT 0
+        opening_payable REAL DEFAULT 0,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
       )
     ''');
 
@@ -51,6 +53,7 @@ class DatabaseHelper {
         total REAL NOT NULL,
         notes TEXT,
         source_trip_id TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (person_id) REFERENCES persons (id) ON DELETE RESTRICT
       )
     ''');
@@ -69,6 +72,7 @@ class DatabaseHelper {
         weight REAL,
         price REAL,
         description TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (person_id) REFERENCES persons (id) ON DELETE RESTRICT
       )
     ''');
@@ -91,9 +95,22 @@ class DatabaseHelper {
     ''');
   }
 
+  Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      try {
+        await db.execute("ALTER TABLE persons ADD COLUMN created_at TEXT DEFAULT CURRENT_TIMESTAMP");
+      } catch (_) {}
+      try {
+        await db.execute("ALTER TABLE trips ADD COLUMN created_at TEXT DEFAULT CURRENT_TIMESTAMP");
+      } catch (_) {}
+      try {
+        await db.execute("ALTER TABLE payments ADD COLUMN created_at TEXT DEFAULT CURRENT_TIMESTAMP");
+      } catch (_) {}
+    }
+  }
+
   Future close() async {
     final db = await instance.database;
     db.close();
   }
 }
-
