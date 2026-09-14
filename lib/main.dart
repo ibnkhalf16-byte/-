@@ -2,17 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/sync_manager.dart';
+import 'core/database_helper.dart';
 import 'screens/home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // 1. تهيئة قاعدة البيانات المحلية SQLite
+  await DatabaseHelper.instance.database;
+
+  // 2. تهيئة الاتصال بمشروع Supabase الخاص بك
   await Supabase.initialize(
-    url: 'https://moccsagndofjwtjmqtdd.supabase.co',
-    anonKey: 'sb_publishable_L-mFR01JF4qMRQXm16Mr2A_CqDxCZo0',
+    url: 'https://llifjaouiosdvwogfnot.supabase.co',
+    anonKey: 'sb_publishable_PQh_xQEI2bQgVp5WtdHyKg_BQUtWYly',
   );
 
-  SyncManager.instance.init();
+  // 3. بدء تشغيل المزامنة وسحب البيانات السحابية
+  await SyncManager.instance.init();
 
   runApp(const AlaaAccountsApp());
 }
@@ -45,5 +51,3 @@ class AlaaAccountsApp extends StatelessWidget {
     );
   }
 }
-
-
