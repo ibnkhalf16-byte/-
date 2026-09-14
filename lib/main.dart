@@ -11,14 +11,14 @@ void main() async {
   // 1. تهيئة قاعدة البيانات المحلية SQLite
   await DatabaseHelper.instance.database;
 
-  // 2. تهيئة الاتصال بمشروع Supabase الخاص بك
+  // 2. تهيئة الاتصال بمشروع Supabase
   await Supabase.initialize(
     url: 'https://llifjaouiosdvwogfnot.supabase.co',
     anonKey: 'sb_publishable_PQh_xQEI2bQgVp5WtdHyKg_BQUtWYly',
   );
 
-  // 3. بدء تشغيل المزامنة وسحب البيانات السحابية
-  await SyncManager.instance.init();
+  // 3. بدء تشغيل المزامنة وسحب البيانات السحابية (بدون await لأنها void)
+  SyncManager.instance.init();
 
   runApp(const AlaaAccountsApp());
 }
