@@ -25,18 +25,27 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Generate Android Scaffolding
+      - name: Recreate Android Project
         run: |
           flutter create . --platforms=android --org com.alaa.accounts
-          
 
-      - name: Get Dependencies with Upgrade
+      - name: Add Android Permissions
         run: |
-          flutter pub get || flutter pub upgrade --major-versions
-      - name: Add Internet Permission
-        run: |
-          sed -i '/<application/i <uses-permission android:name="android.permission.INTERNET"/>\n<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>' android/app/src/main/AndroidManifest.xml || true
-      - name: Build APK
+          python3 -c '
+          path = "android/app/src/main/AndroidManifest.xml"
+          with open(path, "r", encoding="utf-8") as f:
+              content = f.read()
+          perms = "\n    <uses-permission android:name=\"android.permission.INTERNET\"/>\n    <uses-permission android:name=\"android.permission.ACCESS_NETWORK_STATE\"/>\n"
+          if "android.permission.INTERNET" not in content:
+              content = content.replace("<application", perms + "    <application", 1)
+              with open(path, "w", encoding="utf-8") as f:
+                  f.write(content)
+          '
+
+      - name: Get Dependencies
+        run: flutter pub get
+
+      - name: Build Release APK
         run: flutter build apk --release --no-tree-shake-icons
 
       - name: Upload APK
