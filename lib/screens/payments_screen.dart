@@ -45,6 +45,15 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
     final formKey = GlobalKey<FormState>();
     String? selectedPerson = existing?.personId;
     String direction = existing?.direction ?? 'to_supplier';
+
+    // تاريخ السند
+    DateTime selectedDate = existing != null
+        ? (DateTime.tryParse(existing.date) ?? DateTime.now())
+        : DateTime.now();
+
+    final dateCtrl = TextEditingController(
+      text: DateFormat('yyyy-MM-dd').format(selectedDate),
+    );
     final amtCtrl = TextEditingController(text: existing?.amount.toString() ?? '');
     final descCtrl = TextEditingController(text: existing?.description ?? '');
 
@@ -55,27 +64,67 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
           title: Text(isEdit ? 'تعديل سند' : 'تسجيل سند جديد'),
           content: Form(
             key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                DropdownButtonFormField<String>(
-                  value: selectedPerson,
-                  decoration: const InputDecoration(labelText: 'اختر الطرف'),
-                  items: _persons.map((p) => DropdownMenuItem(value: p.id, child: Text(p.name))).toList(),
-                  onChanged: (v) => setModalState(() => selectedPerson = v),
-                  validator: (v) => v == null ? 'مطلوب' : null,
-                ),
-                SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(value: 'to_supplier', label: Text('سداد لمورد')),
-                    ButtonSegment(value: 'from_customer', label: Text('سداد من عميل')),
-                  ],
-                  selected: {direction},
-                  onSelectionChanged: (s) => setModalState(() => direction = s.first),
-                ),
-                TextFormField(controller: amtCtrl, decoration: const InputDecoration(labelText: 'المبلغ (جنيه)'), keyboardType: TextInputType.number, validator: (v) => v!.isEmpty ? 'مطلوب' : null),
-                TextFormField(controller: descCtrl, decoration: const InputDecoration(labelText: 'الوصف أو البيان')),
-              ],
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // اختيار تاريخ السند
+                  ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      side: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    title: Text(
+                      'تاريخ السند: ${dateCtrl.text}',
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                    ),
+                    trailing: const Icon(Icons.calendar_month, color: Colors.green),
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: selectedDate,
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime(2035),
+                      );
+                      if (picked != null) {
+                        setModalState(() {
+                          selectedDate = picked;
+                          dateCtrl.text = DateFormat('yyyy-MM-dd').format(picked);
+                        });
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  DropdownButtonFormField<String>(
+                    value: selectedPerson,
+                    decoration: const InputDecoration(labelText: 'اختر الطرف'),
+                    items: _persons.map((p) => DropdownMenuItem(value: p.id, child: Text(p.name))).toList(),
+                    onChanged: (v) => setModalState(() => selectedPerson = v),
+                    validator: (v) => v == null ? 'مطلوب' : null,
+                  ),
+                  const SizedBox(height: 8),
+                  SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment(value: 'to_supplier', label: Text('سداد لمورد')),
+                      ButtonSegment(value: 'from_customer', label: Text('سداد من عميل')),
+                    ],
+                    selected: {direction},
+                    onSelectionChanged: (s) => setModalState(() => direction = s.first),
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: amtCtrl,
+                    decoration: const InputDecoration(labelText: 'المبلغ (جنيه)'),
+                    keyboardType: TextInputType.number,
+                    validator: (v) => v!.isEmpty ? 'مطلوب' : null,
+                  ),
+                  TextFormField(
+                    controller: descCtrl,
+                    decoration: const InputDecoration(labelText: 'الوصف أو البيان'),
+                  ),
+                ],
+              ),
             ),
           ),
           actions: [
@@ -95,7 +144,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                     personId: selectedPerson!,
                     paymentType: 'cash',
                     direction: direction,
-                    date: existing.date,
+                    date: dateCtrl.text,
                     amount: amt,
                     description: descCtrl.text,
                   );
@@ -107,7 +156,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                     personId: selectedPerson!,
                     paymentType: 'cash',
                     direction: direction,
-                    date: DateFormat('yyyy-MM-dd').format(DateTime.now()),
+                    date: dateCtrl.text,
                     amount: amt,
                     description: descCtrl.text,
                   );
