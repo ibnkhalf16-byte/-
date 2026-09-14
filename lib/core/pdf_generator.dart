@@ -10,118 +10,120 @@ class PdfGenerator {
   }) async {
     final pdf = pw.Document();
 
-    // تحميل وتثبيت خط Cairo العربي الصريح
-    final arabicFont = await PdfGoogleFonts.cairoRegular();
-    final arabicBoldFont = await PdfGoogleFonts.cairoBold();
+    final fontRegular = await PdfGoogleFonts.cairoRegular();
+    final fontBold = await PdfGoogleFonts.cairoBold();
 
     final lastBalance = events.isNotEmpty ? (events.last['balance'] as double) : 0.0;
+    final currentDateStr = DateTime.now().toString().substring(0, 16);
 
     pdf.addPage(
       pw.MultiPage(
-        pageFormat: PdfPageFormat.a4,
+        pageFormat: PdfPageFormat.a4.landscape, // طباعة بالعرض كما في الصورة
         textDirection: pw.TextDirection.rtl,
+        margin: const pw.EdgeInsets.symmetric(horizontal: 25, vertical: 20),
         theme: pw.ThemeData.withFont(
-          base: arabicFont,
-          bold: arabicBoldFont,
+          base: fontRegular,
+          bold: fontBold,
         ),
         header: (pw.Context context) {
-          return pw.Container(
-            margin: const pw.EdgeInsets.only(bottom: 12.0),
-            padding: const pw.EdgeInsets.all(8.0),
-            decoration: const pw.BoxDecoration(
-              border: pw.Border(bottom: pw.BorderSide(width: 1.5, color: PdfColors.blueGrey800)),
-            ),
-            child: pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.Text('كشف حساب مالي', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold, color: PdfColors.blue900)),
-                    pw.Text('الطرف: ${person.name}', style: const pw.TextStyle(fontSize: 13)),
-                    if (person.phone.isNotEmpty)
-                      pw.Text('الهاتف: ${person.phone}', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
-                  ],
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+            children: [
+              pw.Center(
+                child: pw.Text(
+                  'حسابات علاء أبو شادي',
+                  style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold, color: PdfColors.blueGrey900),
                 ),
-                pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.end,
-                  children: [
-                    pw.Text('تجارة علاء أبو شادي', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
-                    pw.Text('التاريخ: ${DateTime.now().toString().substring(0, 10)}', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
-                  ],
-                ),
-              ],
-            ),
-          );
-        },
-        footer: (pw.Context context) {
-          return pw.Container(
-            margin: const pw.EdgeInsets.only(top: 15.0),
-            padding: const pw.EdgeInsets.only(top: 8.0),
-            decoration: const pw.BoxDecoration(
-              border: pw.Border(top: pw.BorderSide(width: 0.8, color: PdfColors.grey400)),
-            ),
-            child: pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                pw.Text(
-                  'صفحة ${context.pageNumber} من ${context.pagesCount}',
-                  style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600),
-                ),
-                pw.Text(
-                  'تم برمجة التطبيق بواسطة علي خلف',
-                  style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: PdfColors.blue900),
-                ),
-              ],
-            ),
-          );
-        },
-        build: (pw.Context context) {
-          return [
-            pw.TableHelper.fromTextArray(
-              context: context,
-              border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
-              headerStyle: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
-              headerDecoration: const pw.BoxDecoration(color: PdfColors.blueGrey800),
-              cellStyle: const pw.TextStyle(fontSize: 9),
-              cellAlignment: pw.Alignment.center,
-              headers: <String>['التاريخ', 'الحركة', 'البيان', 'مدين (+)', 'دائن (-)', 'الرصيد'],
-              data: events.map((ev) {
-                return [
-                  ev['date'].toString(),
-                  ev['type'].toString(),
-                  ev['desc'].toString(),
-                  (ev['debit'] as double) > 0 ? (ev['debit'] as double).toStringAsFixed(2) : '-',
-                  (ev['credit'] as double) > 0 ? (ev['credit'] as double).toStringAsFixed(2) : '-',
-                  (ev['balance'] as double).toStringAsFixed(2),
-                ];
-              }).toList(),
-            ),
-            pw.SizedBox(height: 15),
-            pw.Container(
-              padding: const pw.EdgeInsets.all(10),
-              decoration: pw.BoxDecoration(
-                color: PdfColors.grey100,
-                borderRadius: pw.BorderRadius.circular(6),
-                border: pw.Border.all(color: PdfColors.grey300),
               ),
-              child: pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              pw.SizedBox(height: 6),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.start,
                 children: [
-                  pw.Text('الرصيد النهائي المستحق:', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
                   pw.Text(
-                    '${lastBalance.toStringAsFixed(2)} ج.م (${lastBalance >= 0 ? "رصيد لك" : "رصيد عليك"})',
-                    style: pw.TextStyle(
-                      fontSize: 12,
-                      fontWeight: pw.FontWeight.bold,
-                      color: lastBalance >= 0 ? PdfColors.green800 : PdfColors.red800,
-                    ),
+                    'كشف حساب: ${person.name}',
+                    style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: PdfColors.black),
                   ),
                 ],
               ),
-            ),
-          ];
+              pw.SizedBox(height: 8),
+            ],
+          );
         },
+        footer: (pw.Context context) {
+          return pw.Column(
+            children: [
+              pw.SizedBox(height: 10),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('صفحة ${context.pageNumber}', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700)),
+                  pw.Text('تاريخ الطباعة : $currentDateStr', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700)),
+                ],
+              ),
+            ],
+          );
+        },
+        build: (pw.Context context) => [
+          pw.TableHelper.fromTextArray(
+            context: context,
+            border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
+            headerStyle: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
+            headerDecoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFF1E3A5F)),
+            headerHeight: 22,
+            cellHeight: 20,
+            cellStyle: const pw.TextStyle(fontSize: 8),
+            cellAlignment: pw.Alignment.center,
+            headers: <String>[
+              'التاريخ',
+              'النوع',
+              'البيان',
+              'السيارة',
+              'السائق',
+              'طن',
+              'سعر الطن',
+              'مدين',
+              'دائن',
+              'الرصيد',
+            ],
+            data: events.map((ev) {
+              final double debit = (ev['debit'] as num?)?.toDouble() ?? 0.0;
+              final double credit = (ev['credit'] as num?)?.toDouble() ?? 0.0;
+              final double balance = (ev['balance'] as num?)?.toDouble() ?? 0.0;
+              final double weight = (ev['weight'] as num?)?.toDouble() ?? 0.0;
+              final double price = (ev['price'] as num?)?.toDouble() ?? 0.0;
+
+              return [
+                ev['date']?.toString() ?? '',
+                ev['type']?.toString() ?? '',
+                ev['desc']?.toString() ?? (ev['item']?.toString() ?? ''),
+                ev['vehicle']?.toString() ?? '',
+                ev['driver']?.toString() ?? '',
+                weight > 0 ? weight.toStringAsFixed(2) : '',
+                price > 0 ? price.toStringAsFixed(2) : '',
+                debit > 0 ? debit.toStringAsFixed(2) : '0.00',
+                credit > 0 ? credit.toStringAsFixed(2) : '0.00',
+                balance.toStringAsFixed(2),
+              ];
+            }).toList(),
+          ),
+          pw.SizedBox(height: 12),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.start,
+            children: [
+              pw.Text(
+                'الرصيد النهائي: ${lastBalance.toStringAsFixed(2)}',
+                style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: PdfColors.black),
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 25),
+          pw.Center(
+            child: pw.Text(
+              'تم تصميم البرنامج بواسطة علي خلف',
+              style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColors.grey800),
+            ),
+          ),
+        ],
       ),
     );
 
