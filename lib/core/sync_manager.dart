@@ -8,10 +8,10 @@ class SyncManager {
   SyncManager._init();
 
   void init() {
-    // 1. استرجاع البيانات من السحابة فوراً عند فتح التطبيق
+    // محاولة جلب السجلات من السحابة فور تشغيل التطبيق
     pullAllFromCloud();
 
-    // 2. مراقبة عودة الاتصال لمزامنة التعديلات المعلقة
+    // الاستماع لحالة الإنترنت والمزامنة التلقائية فور توفر اتصال
     Connectivity().onConnectivityChanged.listen((result) {
       if (result != ConnectivityResult.none) {
         syncPending();
@@ -20,7 +20,7 @@ class SyncManager {
     });
   }
 
-  /// إرسال العمليات المحلية إلى السحابة
+  /// تسجيل العملية ليتم رفعها للسحابة فوراً
   Future<void> queueSync(String table, String action, String recordId) async {
     final db = await DatabaseHelper.instance.database;
     await db.insert('sync_queue', {
@@ -29,9 +29,10 @@ class SyncManager {
       'record_id': recordId,
       'created_at': DateTime.now().toIso8601String(),
     });
-    syncPending();
+    await syncPending();
   }
 
+  /// رفع العمليات المعلقة إلى Supabase
   Future<void> syncPending() async {
     final db = await DatabaseHelper.instance.database;
     final List<Map<String, dynamic>> queue = await db.query('sync_queue', orderBy: 'id ASC');
@@ -61,31 +62,33 @@ class SyncManager {
     }
   }
 
-  /// استرجاع وسحب كل البيانات من Supabase وتخزينها محلياً (Restore)
-  Future<void> pullAllFromCloud() async {
+  /// سحب كامل البيانات من Supabase وتخزينها في الهاتف (Restore)
+  Future<bool> pullAllFromCloud() async {
     try {
       final client = Supabase.instance.client;
       final db = await DatabaseHelper.instance.database;
 
-      // سحب الأشخاص
-      final personsData = await client.from('persons').select();
-      for (var p in personsData) {
+      // سحب جدول العملاء والموردين
+      final List<dynamic> persons = await client.from('persons').select();
+      for (var p in persons) {
         await db.insert('persons', Map<String, dynamic>.from(p), conflictAlgorithm: ConflictAlgorithm.replace);
       }
 
-      // سحب النقلات
-      final tripsData = await client.from('trips').select();
-      for (var t in tripsData) {
+      // سحب جدول النقلات
+      final List<dynamic> trips = await client.from('trips').select();
+      for (var t in trips) {
         await db.insert('trips', Map<String, dynamic>.from(t), conflictAlgorithm: ConflictAlgorithm.replace);
       }
 
-      // سحب السدادات
-      final paymentsData = await client.from('payments').select();
-      for (var py in paymentsData) {
+      // سحب جدول السدادات
+      final List<dynamic> payments = await client.from('payments').select();
+      for (var py in payments) {
         await db.insert('payments', Map<String, dynamic>.from(py), conflictAlgorithm: ConflictAlgorithm.replace);
       }
+
+      return true;
     } catch (_) {
-      // التجاهل في حال عدم وجود إنترنت، والاستمرار بالبيانات المحلية
+      return false;
     }
   }
 }
