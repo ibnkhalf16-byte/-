@@ -49,7 +49,15 @@ class _TripsScreenState extends State<TripsScreen> {
     final formKey = GlobalKey<FormState>();
     String? selectedPerson = existing?.personId;
     String operation = existing?.operation ?? 'purchase';
-    final dateCtrl = TextEditingController(text: existing?.date ?? DateFormat('yyyy-MM-dd').format(DateTime.now()));
+
+    // تاريخ النقلة
+    DateTime selectedDate = existing != null
+        ? (DateTime.tryParse(existing.date) ?? DateTime.now())
+        : DateTime.now();
+
+    final dateCtrl = TextEditingController(
+      text: DateFormat('yyyy-MM-dd').format(selectedDate),
+    );
     final carCtrl = TextEditingController(text: existing?.vehicle ?? '');
     final driverCtrl = TextEditingController(text: existing?.driver ?? '');
     final itemCtrl = TextEditingController(text: existing?.item ?? '');
@@ -67,6 +75,34 @@ class _TripsScreenState extends State<TripsScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // اختيار تاريخ النقلة
+                  ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      side: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    title: Text(
+                      'تاريخ النقلة: ${dateCtrl.text}',
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                    ),
+                    trailing: const Icon(Icons.calendar_month, color: Colors.blue),
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: selectedDate,
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime(2035),
+                      );
+                      if (picked != null) {
+                        setModalState(() {
+                          selectedDate = picked;
+                          dateCtrl.text = DateFormat('yyyy-MM-dd').format(picked);
+                        });
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 10),
                   DropdownButtonFormField<String>(
                     value: selectedPerson,
                     decoration: const InputDecoration(labelText: 'اختر الطرف'),
@@ -74,6 +110,7 @@ class _TripsScreenState extends State<TripsScreen> {
                     onChanged: (v) => setModalState(() => selectedPerson = v),
                     validator: (v) => v == null ? 'يرجى اختيار الطرف' : null,
                   ),
+                  const SizedBox(height: 8),
                   SegmentedButton<String>(
                     segments: const [
                       ButtonSegment(value: 'purchase', label: Text('شراء من مورد')),
@@ -82,12 +119,30 @@ class _TripsScreenState extends State<TripsScreen> {
                     selected: {operation},
                     onSelectionChanged: (s) => setModalState(() => operation = s.first),
                   ),
-                  TextFormField(controller: itemCtrl, decoration: const InputDecoration(labelText: 'نوع البضاعة'), validator: (v) => v!.isEmpty ? 'مطلوب' : null),
+                  TextFormField(
+                    controller: itemCtrl,
+                    decoration: const InputDecoration(labelText: 'نوع البضاعة'),
+                    validator: (v) => v!.isEmpty ? 'مطلوب' : null,
+                  ),
                   Row(
                     children: [
-                      Expanded(child: TextFormField(controller: weightCtrl, decoration: const InputDecoration(labelText: 'الوزن بالطن'), keyboardType: TextInputType.number, validator: (v) => v!.isEmpty ? 'مطلوب' : null)),
+                      Expanded(
+                        child: TextFormField(
+                          controller: weightCtrl,
+                          decoration: const InputDecoration(labelText: 'الوزن بالطن'),
+                          keyboardType: TextInputType.number,
+                          validator: (v) => v!.isEmpty ? 'مطلوب' : null,
+                        ),
+                      ),
                       const SizedBox(width: 8),
-                      Expanded(child: TextFormField(controller: priceCtrl, decoration: const InputDecoration(labelText: 'سعر الطن'), keyboardType: TextInputType.number, validator: (v) => v!.isEmpty ? 'مطلوب' : null)),
+                      Expanded(
+                        child: TextFormField(
+                          controller: priceCtrl,
+                          decoration: const InputDecoration(labelText: 'سعر الطن'),
+                          keyboardType: TextInputType.number,
+                          validator: (v) => v!.isEmpty ? 'مطلوب' : null,
+                        ),
+                      ),
                     ],
                   ),
                   Row(
@@ -172,64 +227,97 @@ class _TripsScreenState extends State<TripsScreen> {
     }
 
     String? selectedCustomer;
+    DateTime saleDate = DateTime.now();
+    final dateCtrl = TextEditingController(text: DateFormat('yyyy-MM-dd').format(saleDate));
     final weightCtrl = TextEditingController(text: remaining.toString());
     final priceCtrl = TextEditingController();
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('تحويل النقلة المشتراة لعميل'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('${purchase.item} - سيارة: ${purchase.vehicle} - المتاح: $remaining طن', style: const TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
-            DropdownButtonFormField<String>(
-              decoration: const InputDecoration(labelText: 'العميل المشتري'),
-              items: _persons.map((p) => DropdownMenuItem(value: p.id, child: Text(p.name))).toList(),
-              onChanged: (v) => selectedCustomer = v,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setSaleState) => AlertDialog(
+          title: const Text('تحويل النقلة المشتراة لعميل'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('${purchase.item} - سيارة: ${purchase.vehicle} - المتاح: $remaining طن', style: const TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 10),
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    side: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  title: Text(
+                    'تاريخ البيع: ${dateCtrl.text}',
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                  ),
+                  trailing: const Icon(Icons.calendar_month, color: Colors.green),
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: saleDate,
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime(2035),
+                    );
+                    if (picked != null) {
+                      setSaleState(() {
+                        saleDate = picked;
+                        dateCtrl.text = DateFormat('yyyy-MM-dd').format(picked);
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  decoration: const InputDecoration(labelText: 'العميل المشتري'),
+                  items: _persons.map((p) => DropdownMenuItem(value: p.id, child: Text(p.name))).toList(),
+                  onChanged: (v) => selectedCustomer = v,
+                ),
+                TextFormField(controller: weightCtrl, decoration: const InputDecoration(labelText: 'الوزن المباع (طن)'), keyboardType: TextInputType.number),
+                TextFormField(controller: priceCtrl, decoration: const InputDecoration(labelText: 'سعر بيع الطن'), keyboardType: TextInputType.number),
+              ],
             ),
-            TextFormField(controller: weightCtrl, decoration: const InputDecoration(labelText: 'الوزن المباع (طن)'), keyboardType: TextInputType.number),
-            TextFormField(controller: priceCtrl, decoration: const InputDecoration(labelText: 'سعر بيع الطن'), keyboardType: TextInputType.number),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')),
+            ElevatedButton(
+              onPressed: () async {
+                final w = double.tryParse(weightCtrl.text) ?? 0;
+                final p = double.tryParse(priceCtrl.text) ?? 0;
+                if (selectedCustomer == null || w <= 0 || p <= 0) return;
+                if (w > remaining + 0.0001) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('الوزن يتجاوز المتبقي!')));
+                  return;
+                }
+
+                final authOk = await SettingsScreen.verifyPassword(context);
+                if (!authOk) return;
+
+                final db = await DatabaseHelper.instance.database;
+                final saleTrip = TripModel(
+                  id: const Uuid().v4(),
+                  personId: selectedCustomer!,
+                  operation: 'sale',
+                  date: dateCtrl.text,
+                  vehicle: purchase.vehicle,
+                  driver: purchase.driver,
+                  item: purchase.item,
+                  weight: w,
+                  price: p,
+                  total: w * p,
+                  sourceTripId: purchase.id,
+                );
+                await db.insert('trips', saleTrip.toMap());
+                await SyncManager.instance.queueSync('trips', 'INSERT', saleTrip.id);
+                Navigator.pop(ctx);
+                _loadData();
+              },
+              child: const Text('تأكيد البيع'),
+            ),
           ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')),
-          ElevatedButton(
-            onPressed: () async {
-              final w = double.tryParse(weightCtrl.text) ?? 0;
-              final p = double.tryParse(priceCtrl.text) ?? 0;
-              if (selectedCustomer == null || w <= 0 || p <= 0) return;
-              if (w > remaining + 0.0001) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('الوزن يتجاوز المتبقي!')));
-                return;
-              }
-
-              final authOk = await SettingsScreen.verifyPassword(context);
-              if (!authOk) return;
-
-              final db = await DatabaseHelper.instance.database;
-              final saleTrip = TripModel(
-                id: const Uuid().v4(),
-                personId: selectedCustomer!,
-                operation: 'sale',
-                date: DateFormat('yyyy-MM-dd').format(DateTime.now()),
-                vehicle: purchase.vehicle,
-                driver: purchase.driver,
-                item: purchase.item,
-                weight: w,
-                price: p,
-                total: w * p,
-                sourceTripId: purchase.id,
-              );
-              await db.insert('trips', saleTrip.toMap());
-              await SyncManager.instance.queueSync('trips', 'INSERT', saleTrip.id);
-              Navigator.pop(ctx);
-              _loadData();
-            },
-            child: const Text('تأكيد البيع'),
-          ),
-        ],
       ),
     );
   }
@@ -313,4 +401,3 @@ class _TripsScreenState extends State<TripsScreen> {
     );
   }
 }
-
