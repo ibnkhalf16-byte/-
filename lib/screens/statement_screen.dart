@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../core/database_helper.dart';
-import '../core/accounting_engine.dart';
 import '../models/person_model.dart';
 import '../models/trip_model.dart';
 import '../models/payment_model.dart';
@@ -40,9 +39,57 @@ class _StatementScreenState extends State<StatementScreen> {
     final trips = tMaps.map((m) => TripModel.fromMap(m)).toList();
     final payments = pMaps.map((m) => PaymentModel.fromMap(m)).toList();
 
+    List<Map<String, dynamic>> rawEvents = [];
+
+    // 1. تجميع النقلات
+    for (var t in trips) {
+      final isSale = t.operation == 'sale';
+      rawEvents.add({
+        'date': t.date,
+        'action': isSale ? 'بيع' : 'شراء',
+        'item': t.item,
+        'desc': t.item,
+        'vehicle': t.vehicle,
+        'driver': t.driver,
+        'weight': t.weight,
+        'price': t.price,
+        'debit': isSale ? t.total : 0.0,
+        'credit': isSale ? 0.0 : t.total,
+      });
+    }
+
+    // 2. تجميع السندات
+    for (var p in payments) {
+      final isFromCustomer = p.direction == 'from_customer';
+      rawEvents.add({
+        'date': p.date,
+        'action': 'سداد',
+        'item': p.description.isNotEmpty ? p.description : 'دفعة نقدية',
+        'desc': p.description.isNotEmpty ? p.description : 'دفعة نقدية',
+        'vehicle': '',
+        'driver': '',
+        'weight': 0.0,
+        'price': 0.0,
+        'debit': isFromCustomer ? 0.0 : p.amount,
+        'credit': isFromCustomer ? p.amount : 0.0,
+      });
+    }
+
+    // 3. ترتيب الأحداث بالتاريخ تصاعدياً
+    rawEvents.sort((a, b) => (a['date'] as String).compareTo(b['date'] as String));
+
+    // 4. احتساب الرصيد التراكمي
+    double runningBalance = 0.0;
+    for (var ev in rawEvents) {
+      final debit = (ev['debit'] as num).toDouble();
+      final credit = (ev['credit'] as num).toDouble();
+      runningBalance += (debit - credit);
+      ev['balance'] = runningBalance;
+    }
+
     setState(() {
       _selectedPerson = person;
-      _events = AccountingEngine.calculateStatement(person, trips, payments);
+      _events = rawEvents;
     });
   }
 
@@ -83,12 +130,14 @@ class _StatementScreenState extends State<StatementScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('الرصيد النهائي: ${_events.last['balance'].toStringAsFixed(2)} ج.م',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                   Text(
-                    _events.last['balance'] > 0 ? 'لك عنده' : 'له عندك',
+                    'الرصيد النهائي: ${_events.last['balance'].toStringAsFixed(2)} ج.م',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  Text(
+                    _events.last['balance'] >= 0 ? 'لك عنده' : 'له عندك',
                     style: TextStyle(
-                      color: _events.last['balance'] > 0 ? Colors.green : Colors.red,
+                      color: _events.last['balance'] >= 0 ? Colors.green : Colors.red,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -103,10 +152,12 @@ class _StatementScreenState extends State<StatementScreen> {
                 return Card(
                   margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                   child: ListTile(
-                    title: Text('${ev['type']} - ${ev['desc']}'),
+                    title: Text('${ev['action']} - ${ev['desc']}'),
                     subtitle: Text('التاريخ: ${ev['date']} | مدين: ${ev['debit']} | دائن: ${ev['credit']}'),
-                    trailing: Text('${ev['balance'].toStringAsFixed(2)} ج.م',
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    trailing: Text(
+                      '${ev['balance'].toStringAsFixed(2)} ج.م',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
                 );
               },
