@@ -4,6 +4,7 @@ import '../core/accounting_engine.dart';
 import '../models/person_model.dart';
 import '../models/trip_model.dart';
 import '../models/payment_model.dart';
+import '../core/pdf_generator.dart';
 
 class StatementScreen extends StatefulWidget {
   const StatementScreen({Key? key}) : super(key: key);
@@ -48,7 +49,22 @@ class _StatementScreenState extends State<StatementScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('كشف الحساب المالي')),
+      appBar: AppBar(
+        title: const Text('كشف الحساب المالي'),
+        actions: [
+          if (_selectedPerson != null && _events.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.picture_as_pdf, color: Colors.red),
+              tooltip: 'تصدير PDF',
+              onPressed: () {
+                PdfGenerator.generateAndPrintStatement(
+                  person: _selectedPerson!,
+                  events: _events,
+                );
+              },
+            ),
+        ],
+      ),
       body: Column(
         children: [
           Padding(
@@ -69,8 +85,13 @@ class _StatementScreenState extends State<StatementScreen> {
                 children: [
                   Text('الرصيد النهائي: ${_events.last['balance'].toStringAsFixed(2)} ج.م',
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  Text(_events.last['balance'] > 0 ? 'لك عنده' : 'له عندك',
-                      style: TextStyle(color: _events.last['balance'] > 0 ? Colors.green : Colors.red, fontWeight: FontWeight.bold)),
+                  Text(
+                    _events.last['balance'] > 0 ? 'لك عنده' : 'له عندك',
+                    style: TextStyle(
+                      color: _events.last['balance'] > 0 ? Colors.green : Colors.red,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -84,7 +105,8 @@ class _StatementScreenState extends State<StatementScreen> {
                   child: ListTile(
                     title: Text('${ev['type']} - ${ev['desc']}'),
                     subtitle: Text('التاريخ: ${ev['date']} | مدين: ${ev['debit']} | دائن: ${ev['credit']}'),
-                    trailing: Text('${ev['balance'].toStringAsFixed(2)} ج.م', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    trailing: Text('${ev['balance'].toStringAsFixed(2)} ج.م',
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
                   ),
                 );
               },
