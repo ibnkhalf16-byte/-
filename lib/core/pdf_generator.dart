@@ -10,9 +10,9 @@ class PdfGenerator {
   }) async {
     final pdf = pw.Document();
 
-    // تحميل الخط العربي Cairo المعتمد مع كامل حروف الهجاء
-    final ttfBase = await PdfGoogleFonts.cairoRegular();
-    final ttfBold = await PdfGoogleFonts.cairoBold();
+    // تحميل وتثبيت خط Cairo العربي الصريح
+    final arabicFont = await PdfGoogleFonts.cairoRegular();
+    final arabicBoldFont = await PdfGoogleFonts.cairoBold();
 
     final lastBalance = events.isNotEmpty ? (events.last['balance'] as double) : 0.0;
 
@@ -21,8 +21,8 @@ class PdfGenerator {
         pageFormat: PdfPageFormat.a4,
         textDirection: pw.TextDirection.rtl,
         theme: pw.ThemeData.withFont(
-          base: ttfBase,
-          bold: ttfBold,
+          base: arabicFont,
+          bold: arabicBoldFont,
         ),
         header: (pw.Context context) {
           return pw.Container(
@@ -106,6 +106,29 @@ class PdfGenerator {
             ),
             child: pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text('الرصيد النهائي المستحق:', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                pw.Text(
+                  '${lastBalance.toStringAsFixed(2)} ج.م (${lastBalance >= 0 ? "رصيد لك" : "رصيد عليك"})',
+                  style: pw.TextStyle(
+                    fontSize: 12,
+                    fontWeight: pw.FontWeight.bold,
+                    color: lastBalance >= 0 ? PdfColors.green800 : PdfColors.red800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+
+    await Printing.layoutPdf(
+      onLayout: (PdfPageFormat format) async => pdf.save(),
+      name: 'كشف_حساب_${person.name}',
+    );
+  }
+}
               children: [
                 pw.Text('الرصيد النهائي المستحق:', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
                 pw.Text(
