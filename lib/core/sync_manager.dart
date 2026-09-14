@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -8,10 +9,8 @@ class SyncManager {
   SyncManager._init();
 
   void init() {
-    // محاولة جلب السجلات من السحابة فور تشغيل التطبيق
     pullAllFromCloud();
 
-    // الاستماع لحالة الإنترنت والمزامنة التلقائية فور توفر اتصال
     Connectivity().onConnectivityChanged.listen((result) {
       if (result != ConnectivityResult.none) {
         syncPending();
@@ -20,7 +19,6 @@ class SyncManager {
     });
   }
 
-  /// تسجيل العملية ليتم رفعها للسحابة فوراً
   Future<void> queueSync(String table, String action, String recordId) async {
     final db = await DatabaseHelper.instance.database;
     await db.insert('sync_queue', {
@@ -32,7 +30,6 @@ class SyncManager {
     await syncPending();
   }
 
-  /// رفع العمليات المعلقة إلى Supabase
   Future<void> syncPending() async {
     final db = await DatabaseHelper.instance.database;
     final List<Map<String, dynamic>> queue = await db.query('sync_queue', orderBy: 'id ASC');
@@ -49,46 +46,87 @@ class SyncManager {
         if (action == 'INSERT' || action == 'UPDATE') {
           final records = await db.query(table, where: 'id = ?', whereArgs: [recordId]);
           if (records.isNotEmpty) {
-            await client.from(table).upsert(records.first);
+            final data = Map<String, dynamic>.from(records.first);
+            // إزالة الأعمدة التي يديرها السيرفر إن وجدت
+            data.remove('created_at');
+            await client.from(table).upsert(data);
           }
         } else if (action == 'DELETE') {
           await client.from(table).delete().eq('id', recordId);
         }
 
         await db.delete('sync_queue', where: 'id = ?', whereArgs: [item['id']]);
-      } catch (_) {
+      } catch (e) {
+        debugPrint('Error syncing item: $e');
         break;
       }
     }
   }
 
-  /// سحب كامل البيانات من Supabase وتخزينها في الهاتف (Restore)
   Future<bool> pullAllFromCloud() async {
     try {
       final client = Supabase.instance.client;
       final db = await DatabaseHelper.instance.database;
 
-      // سحب جدول العملاء والموردين
+      // سحب جدول الأشخاص
       final List<dynamic> persons = await client.from('persons').select();
       for (var p in persons) {
-        await db.insert('persons', Map<String, dynamic>.from(p), conflictAlgorithm: ConflictAlgorithm.replace);
+        final map = Map<String, dynamic>.from(p);
+        await db.insert('persons', map, conflictAlgorithm: ConflictAlgorithm.replace);
       }
 
       // سحب جدول النقلات
       final List<dynamic> trips = await client.from('trips').select();
       for (var t in trips) {
-        await db.insert('trips', Map<String, dynamic>.from(t), conflictAlgorithm: ConflictAlgorithm.replace);
+        final map = Map<String, dynamic>.from(t);
+        await db.insert('trips', map, conflictAlgorithm: ConflictAlgorithm.replace);
       }
 
       // سحب جدول السدادات
       final List<dynamic> payments = await client.from('payments').select();
       for (var py in payments) {
-        await db.insert('payments', Map<String, dynamic>.from(py), conflictAlgorithm: ConflictAlgorithm.replace);
+        final map = Map<String, dynamic>.from(py);
+        await db.insert('payments', map, conflictAlgorithm: ConflictAlgorithm.replace);
       }
 
+      // بعد السحب، رفع أي بيانات محلية موجودة لم تُرفع بعد
+      await uploadAllLocalData();
+
       return true;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Error pulling from cloud: $e');
       return false;
+    }
+  }
+
+  /// دالة تضمن رفع كل البيانات الموجودة في الهاتف حالياً إلى السحابة فوراً
+  Future<void> uploadAllLocalData() async {
+    try {
+      final client = Supabase.instance.client;
+      final db = await DatabaseHelper.instance.database;
+
+      final localPersons = await db.query('persons');
+      for (var p in localPersons) {
+        final data = Map<String, dynamic>.from(p);
+        data.remove('created_at');
+        await client.from('persons').upsert(data);
+      }
+
+      final localTrips = await db.query('trips');
+      for (var t in localTrips) {
+        final data = Map<String, dynamic>.from(t);
+        data.remove('created_at');
+        await client.from('trips').upsert(data);
+      }
+
+      final localPayments = await db.query('payments');
+      for (var py in localPayments) {
+        final data = Map<String, dynamic>.from(py);
+        data.remove('created_at');
+        await client.from('payments').upsert(data);
+      }
+    } catch (e) {
+      debugPrint('Error uploading local data: $e');
     }
   }
 }
