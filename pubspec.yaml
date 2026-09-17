@@ -1,5 +1,5 @@
 name: alaa_accounts
-description: "حسابات علاء أبو شادي"
+description: "حسابات علاء أبو شادي - تجارة الغلال والمحاصيل"
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -28,10 +28,12 @@ dev_dependencies:
   flutter_launcher_icons: any
 
 flutter_launcher_icons:
-  android: true
-  windows: true
+  android: "ic_launcher"
   image_path: "assets/images/logo.png"
   min_sdk_android: 21
+  windows:
+    generate: true
+    image_path: "assets/images/logo.png"
 
 flutter:
   uses-material-design: true
